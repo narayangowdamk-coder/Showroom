@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AETHER MOTORS | Futuristic Luxury Showroom</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700;800&amp;family=Inter:wght@400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#c9c6c5",
+                        "surface": "#141313",
+                        "surface-container-high": "#2b2a2a",
+                        "background": "#050505",
+                        "neon-blue": "#00d2ff",
+                        "on-surface": "#e5e2e1",
+                        "outline-variant": "#444748"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-md": ["Inter"],
+                        "label-mono": ["Geist Mono"]
+                    },
+                    "spacing": {
+                        "container-max": "1440px",
+                        "margin-desktop": "64px"
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #050505; color: #e5e2e1; }
+        
+        #shader-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .glass-nav {
+            background: rgba(10, 10, 10, 0.4);
+            backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-card {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 210, 255, 0.1);
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            cursor: pointer;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(0, 210, 255, 0.5);
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.15);
+        }
+
+        .tilt-element {
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+
+        .inner-content {
+            transform: translateZ(50px);
+        }
+
+        .spec-bar-bg { background: rgba(255, 255, 255, 0.05); }
+        .spec-bar-fill {
+            height: 4px;
+            background: linear-gradient(90deg, #00d2ff, #c9c6c5);
+            width: 0%;
+            transition: width 1.5s cubic-bezier(0.65, 0, 0.35, 1);
+        }
+
+        .reveal-text {
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+        }
+
+        .neon-glow {
+            text-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+        }
+
+        .carbon-texture {
+            background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.02) 1px, transparent 0);
+            background-size: 4px 4px;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .gauge-container {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+        .gauge-svg { transform: rotate(-90deg); }
+        .gauge-circle-bg { stroke: rgba(255,255,255,0.1); stroke-width: 4; fill: none; }
+        .gauge-circle-val { 
+            stroke: #00d2ff; stroke-width: 4; fill: none; 
+            stroke-dasharray: 251.2; stroke-dashoffset: 251.2; 
+            transition: stroke-dashoffset 2s ease-out;
+        }
+
+        /* Modal specific styles */
+        #car-modal {
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s 0.4s, opacity 0.4s ease;
+        }
+        #car-modal.active {
+            visibility: visible;
+            opacity: 1;
+            transition: visibility 0s 0s, opacity 0.4s ease;
+        }
+        .modal-glass {
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 50px rgba(0, 210, 255, 0.1);
+        }
+        .modal-close-btn:hover {
+            transform: rotate(90deg);
+        }
+        .modal-content-card {
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .active .modal-content-card {
+            transform: scale(1) translateY(0);
+        }
+    </style>
+</head>
+<body class="font-body-md overflow-x-hidden selection:bg-neon-blue selection:text-black">
+<canvas id="shader-canvas"></canvas>
+<!-- Top Navigation -->
+<nav class="fixed top-0 w-full z-50 glass-nav">
+<div class="flex justify-between items-center px-6 md:px-margin-desktop py-6 max-w-container-max mx-auto">
+<div class="font-headline-lg text-[22px] tracking-tighter text-on-surface italic uppercase magnetic">AETHER <span class="text-neon-blue">MOTORS</span></div>
+<div class="hidden md:flex gap-10 items-center">
+<a class="font-label-mono text-[10px] tracking-[0.3em] uppercase text-neon-blue border-b border-neon-blue pb-1 magnetic" href="#">Models</a>
+<a class="font-label-mono text-[10px] tracking-[0.3em] uppercase text-on-surface/60 hover:text-white transition-colors magnetic" href="#">Heritage</a>
+<a class="font-label-mono text-[10px] tracking-[0.3em] uppercase text-on-surface/60 hover:text-white transition-colors magnetic" href="#">Bespoke</a>
+<a class="font-label-mono text-[10px] tracking-[0.3em] uppercase text-on-surface/60 hover:text-white transition-colors magnetic" href="#">Showrooms</a>
+</div>
+<button class="bg-white text-black font-label-mono px-8 py-2.5 rounded-full uppercase tracking-wider text-[10px] transition-transform hover:scale-105 active:scale-95 magnetic">
+            Enquire Now
+        </button>
+</div>
+</nav>
+<!-- Hero Section -->
+<header class="relative h-screen flex items-center justify-center overflow-hidden">
+<div class="absolute inset-0 z-0">
+<div class="w-full h-full scale-110" id="hero-parallax">
+<img alt="Hero Background" class="w-full h-full object-cover opacity-60 grayscale brightness-50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRpQ7V02OLwoWbULqIIrybzrXEClj5akUHCPoUNzybebAHlXcq6_e6an18Dfujju9HdpOHbtndG2b23pDiwxaDyAlEgd4NdiZf0HrJQC-71GjSr9I6gAcoLqfhJaPWtc5RJe510Mgn3GeAyzDdVNmFOIEx0eX2AHh7wbhe-GzA5taIhQnf3hwINkyyjiVA8cCSRy8xyzZvoodgp9rBrurAY8-bU1MnVNMMFvgm-ftf5z2JDN_2jWbOLtfiLdkvewV1K49Q99u8sWQ"/>
+</div>
+</div>
+<div class="relative z-10 text-center px-gutter max-w-6xl">
+<div class="font-label-mono text-label-mono tracking-[0.6em] uppercase text-neon-blue mb-8 opacity-0 reveal-up">The Pinnacle of Motion</div>
+<div class="reveal-text overflow-hidden mb-12">
+<h1 class="font-display-lg text-5xl md:text-[100px] uppercase text-on-surface leading-none opacity-0 translate-y-full" id="hero-title">Drive Your Dream</h1>
+</div>
+<div class="flex flex-col md:flex-row gap-6 justify-center opacity-0 reveal-up" style="transition-delay: 400ms">
+<button class="bg-white text-black px-12 py-5 rounded-full font-label-mono uppercase tracking-[0.2em] text-[12px] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] transition-all magnetic">
+                Explore Collection
+            </button>
+<button class="glass-card text-on-surface border border-white/10 px-12 py-5 rounded-full font-label-mono uppercase tracking-[0.2em] text-[12px] hover:bg-white/5 transition-all magnetic">
+                Configure Virtual
+            </button>
+</div>
+</div>
+<div class="absolute bottom-12 left-1/2 -translate-x-1/2 z-20">
+<div class="flex flex-col items-center gap-2 opacity-40">
+<span class="font-label-mono text-[10px] tracking-[0.4em] uppercase">Scroll</span>
+<div class="w-px h-12 bg-gradient-to-b from-neon-blue to-transparent"></div>
+</div>
+</div>
+</header>
+<!-- Featured Collection -->
+<section class="py-32 px-6 md:px-margin-desktop max-w-container-max mx-auto relative z-10">
+<div class="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
+<div class="reveal-up">
+<span class="font-label-mono text-label-mono text-neon-blue uppercase tracking-[0.4em]">Curated Precision</span>
+<h2 class="font-headline-lg text-4xl md:text-6xl mt-4 italic uppercase">Vanguard Selection</h2>
+</div>
+<div class="reveal-up font-label-mono text-[10px] tracking-[0.4em] text-on-surface/40 mb-2">01 — 04 INVENTORY</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8" id="car-gallery">
+<!-- Mercedes-AMG ONE -->
+<div class="glass-card tilt-element rounded-2xl p-6 group reveal-up" data-car="amg-one" data-delay="0">
+<div class="inner-content">
+<div class="relative aspect-[3/4] rounded-xl overflow-hidden mb-8">
+<img alt="AMG ONE" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrgqQJbC-u2XT24zULfEPfE0rrBghtuV5T6qotAtdZGf4-u0ayNc7Z1_pYYu-eqZcW8K7_1YjSWf1H6sj4vlsidZTX7bxFepyllzJzRnhwnIzJs87vjw8UFU_rYTwFKdxwPr1N78iXzFu9LWbmj72n200Qd1Qrx8RqVmt2rrQ1nHFCe5rA_zBc510oLczdwyMcZ5xnQs7t3GUaN3689j1dmz5PG39_tE0mAKmIcAA88aPlMkMteqmmdiXnkDBDauIJ6bAdYIIYRlI"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="bg-neon-blue text-black font-label-mono text-[9px] px-2 py-0.5 rounded">HYBRID V6</span>
+</div>
+</div>
+<h3 class="font-headline-lg text-2xl mb-4 italic uppercase">AMG ONE</h3>
+<div class="space-y-4 mb-8">
+<div>
+<div class="flex justify-between text-[10px] font-label-mono mb-1 text-on-surface/60">
+<span>POWER OUTPUT</span>
+<span>1,063 HP</span>
+</div>
+<div class="spec-bar-bg rounded-full"><div class="spec-bar-fill rounded-full" style="width: 95%;"></div></div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-label-mono mb-1 text-on-surface/60">
+<span>0-100 KM/H</span>
+<span>2.9 SEC</span>
+</div>
+<div class="spec-bar-bg rounded-full"><div class="spec-bar-fill rounded-full" style="width: 98%;"></div></div>
+</div>
+</div>
+<button class="w-full py-4 border border-white/10 rounded-xl font-label-mono text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">Details</button>
+</div>
+</div>
+<!-- BMW M4 -->
+<div class="glass-card tilt-element rounded-2xl p-6 group reveal-up" data-car="bmw-m4" data-delay="100">
+<div class="inner-content">
+<div class="relative aspect-[3/4] rounded-xl overflow-hidden mb-8">
+<img alt="BMW M4" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCejW7-dAX0BPMqfU_h5_1jiEO9HFpxrqw6o17tS8-stVWvt7FPj0Fme2kG7mh9pjwXtRKh9mRleJC7EvR-wD6bhmv8bi4EVvo4YHIqAdzLv515YVAbLiDZXcCKTC37cVUcoHIt0dC-h-5fVgPcqGXo9zBhLgW3LXAKRXzbgrQx-GNOpePWq_9XDrlYH7iPsKkwJVsZxSmaYti0EUooP0EiZrf2ZqqZfIacyRPqraN3IEFgmeRivXnsIKHaEaC8foaseQEXhbZ7pzA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="bg-white/10 text-white font-label-mono text-[9px] px-2 py-0.5 rounded">M-POWER</span>
+</div>
+</div>
+<h3 class="font-headline-lg text-2xl mb-4 italic uppercase">BMW M4 G82</h3>
+<div class="space-y-4 mb-8">
+<div>
+<div class="flex justify-between text-[10px] font-label-mono mb-1 text-on-surface/60">
+<span>POWER OUTPUT</span>
+<span>503 HP</span>
+</div>
+<div class="spec-bar-bg rounded-full"><div class="spec-bar-fill rounded-full" style="width: 75%;"></div></div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-label-mono mb-1 text-on-surface/60">
+<span>0-100 KM/H</span>
+<span>3.5 SEC</span>
+</div>
+<div class="spec-bar-bg rounded-full"><div class="spec-bar-fill rounded-full" style="width: 82%;"></div></div>
+</div>
+</div>
+<button class="w-full py-4 border border-white/10 rounded-xl font-label-mono text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">Details</button>
+</div>
+</div>
+<!-- Audi R8 -->
+<div class="glass-card tilt-element rounded-2xl p-6 group reveal-up" data-car="audi-r8" data-delay="200">
+<div class="inner-content">
+<div class="relative aspect-[3/4] rounded-xl overflow-hidden mb-8">
+<img alt="Audi R8" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN9PfIDAdOcOEJKkqhHWUvREvjVJR3ym_TGCUSYeQ8DmutcZB56GaZeABKKaADav313E6Gpn5PylJY-3BSNUZoctXTo18Bkvo3ZCa-7lAZnUFdvJAvRIDYXgA7_R-CxAKMFTGlxQ6q3o4KQBBzg7SJJzf7I_bD3GE1PRHsgiBphR9z5C75kMvVz-4DGW-mR2Bge2JNjXUxnVi4Fr23DrijZUPM0IaqW_2FHwVMzwKrJ_Jc5BlmO0dbrjoEwZiojYtw5F7J_GnOW_k"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="bg-white/10 text-white font-label-mono text-[9px] px-2 py-0.5 rounded">V10 QUATTRO</span>
+</div>
+</div>
+<h3 class="font-headline-lg text-2xl mb-4 italic uppercase">AUDI R8</h3>
+<div class="space-y-4 mb-8">
+<div>
+<div class="flex justify-between text-[10px] font-label-mono mb-1 text-on-surface/60">
+<span>POWER OUTPUT</span>
+<span>620 HP</span>
+</div>
+<div class="spec-bar-bg rounded-full"><div class="spec-bar-fill rounded-full" style="width: 85%;"></div></div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-label-mono mb-1 text-on-surface/60">
+<span>0-100 KM/H</span>
+<span>3.1 SEC</span>
+</div>
+<div class="spec-bar-bg rounded-full"><div class="spec-bar-fill rounded-full" style="width: 90%;"></div></div>
+</div>
+</div>
+<button class="w-full py-4 border border-white/10 rounded-xl font-label-mono text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">Details</button>
+</div>
+</div>
+<!-- Porsche 911 -->
+<div class="glass-card tilt-element rounded-2xl p-6 group reveal-up" data-car="porsche-911" data-delay="300">
+<div class="inner-content">
+<div class="relative aspect-[3/4] rounded-xl overflow-hidden mb-8">
+<img alt="Porsche 911" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRpQ7V02OLwoWbULqIIrybzrXEClj5akUHCPoUNzybebAHlXcq6_e6an18Dfujju9HdpOHbtndG2b23pDiwxaDyAlEgd4NdiZf0HrJQC-71GjSr9I6gAcoLqfhJaPWtc5RJe510Mgn3GeAyzDdVNmFOIEx0eX2AHh7wbhe-GzA5taIhQnf3hwINkyyjiVA8cCSRy8xyzZvoodgp9rBrurAY8-bU1MnVNMMFvgm-ftf5z2JDN_2jWbOLtfiLdkvewV1K49Q99u8sWQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="bg-white/10 text-white font-label-mono text-[9px] px-2 py-0.5 rounded">GT3 RS</span>
+</div>
+</div>
+<h3 class="font-headline-lg text-2xl mb-4 italic uppercase">PORSCHE 911</h3>
+<div class="space-y-4 mb-8">
+<div>
+<div class="flex justify-between text-[10px] font-label-mono mb-1 text-on-surface/60">
+<span>POWER OUTPUT</span>
+<span>518 HP</span>
+</div>
+<div class="spec-bar-bg rounded-full"><div class="spec-bar-fill rounded-full" style="width: 78%;"></div></div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-label-mono mb-1 text-on-surface/60">
+<span>0-100 KM/H</span>
+<span>3.2 SEC</span>
+</div>
+<div class="spec-bar-bg rounded-full"><div class="spec-bar-fill rounded-full" style="width: 88%;"></div></div>
+</div>
+</div>
+<button class="w-full py-4 border border-white/10 rounded-xl font-label-mono text-[10px] uppercase tracking-widest hover:bg-white hover:text-black transition-all">Details</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Interactive Comparison Section -->
+<section class="py-32 bg-surface/40 border-y border-white/5 relative overflow-hidden">
+<div class="max-w-container-max mx-auto px-6 md:px-margin-desktop">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-24 items-center">
+<div class="reveal-up">
+<span class="font-label-mono text-label-mono text-neon-blue uppercase tracking-[0.4em]">Side-by-Side</span>
+<h2 class="font-headline-lg text-4xl md:text-5xl mt-6 mb-8 italic">Bespoke Comparison</h2>
+<p class="text-on-surface/60 leading-relaxed mb-10 max-w-sm">Analyze every metric. Our performance telemetry allows you to dissect the DNA of your future acquisition.</p>
+<!-- Speedometer Visual -->
+<div class="flex items-center gap-8">
+<div class="gauge-container reveal-up" data-gauge="85">
+<svg class="gauge-svg" viewbox="0 0 100 100">
+<circle class="gauge-circle-bg" cx="50" cy="50" r="40"></circle>
+<circle class="gauge-circle-val" cx="50" cy="50" r="40"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-xs font-bold">RPM</span>
+<span class="text-[10px] opacity-40">x1000</span>
+</div>
+</div>
+<div>
+<div class="text-3xl font-headline-lg italic">9,000 <span class="text-sm not-italic opacity-40">REDLINE</span></div>
+<div class="text-xs font-label-mono text-neon-blue tracking-widest mt-1">ENGINE HARMONICS</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-2 reveal-up">
+<div class="glass-card rounded-2xl overflow-hidden cursor-default">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-white/10">
+<th class="p-6 font-label-mono text-[10px] text-on-surface/40 uppercase tracking-widest">Metric</th>
+<th class="p-6 font-label-mono text-[10px] text-neon-blue uppercase tracking-widest">AMG ONE</th>
+<th class="p-6 font-label-mono text-[10px] text-on-surface/40 uppercase tracking-widest">911 GT3 RS</th>
+</tr>
+</thead>
+<tbody class="text-sm font-body-md">
+<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+<td class="p-6 text-on-surface/60">Engine Type</td>
+<td class="p-6">Hybrid Turbo V6</td>
+<td class="p-6">Flat-Six N/A</td>
+</tr>
+<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+<td class="p-6 text-on-surface/60">Transmission</td>
+<td class="p-6">8-Sp Automated Manual</td>
+<td class="p-6">7-Sp PDK</td>
+</tr>
+<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+<td class="p-6 text-on-surface/60">Top Speed</td>
+<td class="p-6">352 km/h</td>
+<td class="p-6">296 km/h</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors">
+<td class="p-6 text-on-surface/60">Curb Weight</td>
+<td class="p-6">1,695 kg</td>
+<td class="p-6">1,450 kg</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Direct Connection -->
+<section class="py-40 bg-black/80 relative">
+<div class="max-w-container-max mx-auto px-6 md:px-margin-desktop">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-32">
+<div class="reveal-up">
+<span class="font-label-mono text-label-mono text-neon-blue uppercase tracking-[0.4em]">Direct Connection</span>
+<h2 class="font-headline-lg text-4xl md:text-6xl mt-8 mb-16 italic uppercase leading-tight">Your Aether<br/>Legacy Starts<br/>Here.</h2>
+<div class="space-y-12">
+<div class="flex gap-10 group cursor-pointer">
+<div class="w-16 h-16 rounded-full border border-white/10 flex items-center justify-center group-hover:border-neon-blue transition-colors">
+<span class="material-symbols-outlined text-neon-blue text-2xl">rocket_launch</span>
+</div>
+<div>
+<p class="font-label-mono text-[10px] text-on-surface/40 uppercase tracking-widest mb-2">Priority Access</p>
+<p class="font-headline-lg text-xl italic">+44 (0) 20 7946 0123</p>
+</div>
+</div>
+<div class="flex gap-10 group cursor-pointer">
+<div class="w-16 h-16 rounded-full border border-white/10 flex items-center justify-center group-hover:border-neon-blue transition-colors">
+<span class="material-symbols-outlined text-neon-blue text-2xl">location_on</span>
+</div>
+<div>
+<p class="font-label-mono text-[10px] text-on-surface/40 uppercase tracking-widest mb-2">London Atelier</p>
+<p class="font-headline-lg text-xl italic">Mayfair, London W1J 7BR</p>
+</div>
+</div>
+</div>
+</div>
+<div class="glass-card p-12 rounded-3xl reveal-up relative overflow-hidden cursor-default">
+<div class="absolute top-0 right-0 p-8 opacity-5">
+<span class="material-symbols-outlined text-8xl">edit_document</span>
+</div>
+<h3 class="font-headline-lg text-3xl mb-12 italic">Secure Commission</h3>
+<form class="space-y-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="relative group">
+<input class="w-full bg-transparent border-b border-white/10 focus:border-neon-blue outline-none py-4 transition-colors text-on-surface peer" placeholder=" " type="text"/>
+<label class="absolute left-0 top-4 text-[10px] font-label-mono uppercase tracking-widest text-on-surface/40 pointer-events-none transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-[10px] peer-focus:text-neon-blue">Full Name</label>
+</div>
+<div class="relative group">
+<input class="w-full bg-transparent border-b border-white/10 focus:border-neon-blue outline-none py-4 transition-colors text-on-surface peer" placeholder=" " type="email"/>
+<label class="absolute left-0 top-4 text-[10px] font-label-mono uppercase tracking-widest text-on-surface/40 pointer-events-none transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-xs peer-focus:-top-4 peer-focus:text-[10px] peer-focus:text-neon-blue">Email Address</label>
+</div>
+</div>
+<div class="relative group">
+<select class="w-full bg-transparent border-b border-white/10 focus:border-neon-blue outline-none py-4 transition-colors text-on-surface appearance-none cursor-pointer">
+<option class="bg-surface">Select Interest</option>
+<option class="bg-surface">Bespoke Acquisition</option>
+<option class="bg-surface">Restoration Project</option>
+<option class="bg-surface">Private Tour</option>
+</select>
+<span class="material-symbols-outlined absolute right-0 top-4 pointer-events-none opacity-40">expand_more</span>
+</div>
+<button class="w-full bg-neon-blue text-black font-label-mono uppercase tracking-[0.3em] py-6 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-transform magnetic">
+                        Send Enquiry
+                    </button>
+</form>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-black py-24 border-t border-white/5 relative z-10">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-16 px-6 md:px-margin-desktop max-w-container-max mx-auto">
+<div class="col-span-1 md:col-span-1">
+<div class="font-headline-lg text-2xl text-on-surface italic uppercase mb-8">AETHER <span class="text-neon-blue">MOTORS</span></div>
+<p class="text-on-surface/40 text-[13px] leading-relaxed max-w-xs mb-10">Architecting the future of elite mobility through technical mastery and aesthetic perfection.</p>
+<div class="flex gap-6">
+<a class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-[10px] hover:border-neon-blue hover:text-neon-blue transition-all" href="#">INSTA</a>
+<a class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-[10px] hover:border-neon-blue hover:text-neon-blue transition-all" href="#">TWTR</a>
+<a class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-[10px] hover:border-neon-blue hover:text-neon-blue transition-all" href="#">LNKD</a>
+</div>
+</div>
+<div>
+<h5 class="font-label-mono text-[10px] text-neon-blue uppercase tracking-[0.4em] mb-10">Locations</h5>
+<div class="space-y-4 text-sm text-on-surface/40">
+<a class="block hover:text-white transition-colors" href="#">Mayfair, London</a>
+<a class="block hover:text-white transition-colors" href="#">DIFC, Dubai</a>
+<a class="block hover:text-white transition-colors" href="#">Ginza, Tokyo</a>
+<a class="block hover:text-white transition-colors" href="#">Beverly Hills, LA</a>
+</div>
+</div>
+<div>
+<h5 class="font-label-mono text-[10px] text-on-surface/40 uppercase tracking-[0.4em] mb-10">Corporate</h5>
+<div class="space-y-4 text-sm text-on-surface/40">
+<a class="block hover:text-white transition-colors" href="#">Investors</a>
+<a class="block hover:text-white transition-colors" href="#">Sustainability</a>
+<a class="block hover:text-white transition-colors" href="#">Careers</a>
+<a class="block hover:text-white transition-colors" href="#">Press Hub</a>
+</div>
+</div>
+<div>
+<h5 class="font-label-mono text-[10px] text-on-surface/40 uppercase tracking-[0.4em] mb-10">Newsletter</h5>
+<p class="text-[11px] text-on-surface/40 mb-6 uppercase tracking-widest">Access the restricted pipeline.</p>
+<div class="flex gap-4">
+<input class="bg-transparent border-b border-white/10 focus:border-neon-blue outline-none py-2 text-xs flex-1 transition-colors" placeholder="Email Address" type="text"/>
+<button class="text-neon-blue font-label-mono text-[10px] uppercase tracking-widest hover:translate-x-2 transition-transform">Join</button>
+</div>
+</div>
+</div>
+<div class="mt-32 text-center">
+<p class="font-label-mono text-[9px] text-on-surface/20 uppercase tracking-[0.6em]">© 2024 AETHER MOTORS GROUP — ALL RIGHTS RESERVED.</p>
+</div>
+</footer>
+<!-- Premium Fullscreen Modal -->
+<div class="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 overflow-hidden" id="car-modal">
+<div class="absolute inset-0 bg-black/60 backdrop-blur-2xl modal-overlay"></div>
+<div class="modal-content-card w-full max-w-6xl h-full max-h-[85vh] modal-glass rounded-[2rem] relative z-10 flex flex-col md:flex-row overflow-hidden border border-white/10">
+<!-- Close Button -->
+<button class="absolute top-8 right-8 z-30 w-12 h-12 rounded-full border border-white/20 flex items-center justify-center bg-black/20 hover:bg-white hover:text-black transition-all duration-300 modal-close-btn" id="modal-close">
+<span class="material-symbols-outlined">close</span>
+</button>
+<!-- Left: Image Section -->
+<div class="w-full md:w-1/2 h-64 md:h-full relative overflow-hidden bg-black/20">
+<div class="carousel-container h-full w-full">
+<img alt="Car Detail" class="w-full h-full object-cover" id="modal-image" src=""/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+<!-- Mini Thumbnails Carousel Placeholder -->
+<div class="absolute bottom-8 left-8 flex gap-4">
+<div class="w-12 h-12 rounded-lg border-2 border-neon-blue overflow-hidden cursor-pointer"><img class="w-full h-full object-cover opacity-100" id="thumb-1" src=""/></div>
+<div class="w-12 h-12 rounded-lg border border-white/20 overflow-hidden cursor-pointer hover:border-white/40"><img class="w-full h-full object-cover opacity-40" id="thumb-2" src=""/></div>
+<div class="w-12 h-12 rounded-lg border border-white/20 overflow-hidden cursor-pointer hover:border-white/40"><img class="w-full h-full object-cover opacity-40" id="thumb-3" src=""/></div>
+</div>
+</div>
+</div>
+<!-- Right: Specs Section -->
+<div class="w-full md:w-1/2 h-full p-8 md:p-12 overflow-y-auto no-scrollbar carbon-texture flex flex-col">
+<div class="mb-10">
+<span class="font-label-mono text-[10px] text-neon-blue uppercase tracking-[0.4em]" id="modal-category">Vanguard Series</span>
+<h2 class="font-headline-lg text-4xl md:text-5xl mt-2 italic uppercase" id="modal-title">MODEL NAME</h2>
+</div>
+<div class="grid grid-cols-2 gap-x-8 gap-y-10 mb-12">
+<div class="spec-item">
+<p class="font-label-mono text-[9px] text-on-surface/40 uppercase tracking-widest mb-2">Engine Architecture</p>
+<p class="font-headline-lg text-xl italic" id="spec-engine">--</p>
+</div>
+<div class="spec-item">
+<p class="font-label-mono text-[9px] text-on-surface/40 uppercase tracking-widest mb-2">Peak Power</p>
+<p class="font-headline-lg text-xl italic text-neon-blue"><span class="counter" id="spec-hp">0</span> HP</p>
+</div>
+<div class="spec-item">
+<p class="font-label-mono text-[9px] text-on-surface/40 uppercase tracking-widest mb-2">Maximum Torque</p>
+<p class="font-headline-lg text-xl italic" id="spec-torque">-- Nm</p>
+</div>
+<div class="spec-item">
+<p class="font-label-mono text-[9px] text-on-surface/40 uppercase tracking-widest mb-2">0 — 100 km/h</p>
+<p class="font-headline-lg text-xl italic text-white" id="spec-accel">-- Sec</p>
+</div>
+<div class="spec-item">
+<p class="font-label-mono text-[9px] text-on-surface/40 uppercase tracking-widest mb-2">Top Velocity</p>
+<p class="font-headline-lg text-xl italic"><span class="counter" id="spec-speed">0</span> km/h</p>
+</div>
+<div class="spec-item">
+<p class="font-label-mono text-[9px] text-on-surface/40 uppercase tracking-widest mb-2">Transmission</p>
+<p class="font-headline-lg text-xl italic" id="spec-trans">--</p>
+</div>
+</div>
+<div class="space-y-6 mb-12">
+<div>
+<div class="flex justify-between text-[10px] font-label-mono mb-2 text-on-surface/60">
+<span>AERODYNAMIC EFFICIENCY</span>
+<span id="perc-aero">--%</span>
+</div>
+<div class="spec-bar-bg rounded-full h-1"><div class="spec-bar-fill rounded-full" id="bar-aero" style="width: 0%;"></div></div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-label-mono mb-2 text-on-surface/60">
+<span>WEIGHT-TO-POWER RATIO</span>
+<span id="perc-weight">--%</span>
+</div>
+<div class="spec-bar-bg rounded-full h-1"><div class="spec-bar-fill rounded-full" id="bar-weight" style="width: 0%;"></div></div>
+</div>
+</div>
+<div class="mt-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+<button class="bg-white text-black py-5 rounded-xl font-label-mono text-[10px] uppercase tracking-widest hover:bg-neon-blue hover:text-black transition-all">Book Test Drive</button>
+<div class="flex gap-4">
+<button class="flex-1 border border-white/10 py-5 rounded-xl font-label-mono text-[10px] uppercase tracking-widest hover:bg-white/5 transition-all">Quote</button>
+<button class="flex-1 border border-white/10 py-5 rounded-xl font-label-mono text-[10px] uppercase tracking-widest hover:bg-white/5 transition-all">Gallery</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+    // WebGL Shader Setup
+    const canvas = document.getElementById('shader-canvas');
+    const gl = canvas.getContext('webgl');
+    
+    function initShader() {
+        const vsSource = `
+            attribute vec2 a_position;
+            varying vec2 v_texCoord;
+            void main() {
+                v_texCoord = a_position * 0.5 + 0.5;
+                v_texCoord.y = 1.0 - v_texCoord.y;
+                gl_Position = vec4(a_position, 0, 1);
+            }
+        `;
+        
+        const fsSource = `
+            precision highp float;
+            uniform float u_time;
+            uniform vec2 u_resolution;
+            uniform vec2 u_mouse;
+            varying vec2 v_texCoord;
+
+            float hash(vec2 p) {
+                p = fract(p * vec2(123.34, 456.21));
+                p += dot(p, p + 45.32);
+                return fract(p.x * p.y);
+            }
+
+            void main() {
+                vec2 uv = v_texCoord;
+                vec2 p = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / min(u_resolution.y, u_resolution.x);
+                
+                // Carbon fiber base pattern
+                vec2 grid = fract(uv * 100.0);
+                float pattern = step(0.5, grid.x) * step(0.5, grid.y) + step(grid.x, 0.5) * step(grid.y, 0.5);
+                vec3 color = mix(vec3(0.04), vec3(0.06), pattern);
+                
+                // Animate light streaks
+                float streaks = 0.0;
+                for(float i = 0.0; i < 4.0; i++) {
+                    float speed = 0.2 + i * 0.1;
+                    float offset = i * 2.5;
+                    float x = mod(uv.x + u_time * speed + offset, 2.0) - 1.0;
+                    streaks += exp(-100.0 * x * x) * (0.1 + 0.1 * i);
+                }
+                
+                // Mouse glow
+                vec2 mouse = u_mouse / u_resolution;
+                float dist = length(uv - mouse);
+                float glow = exp(-5.0 * dist);
+                
+                // Blue accent lighting
+                vec3 accent = vec3(0.0, 0.3, 1.0) * (streaks + glow * 0.3);
+                color += accent;
+                
+                // Vignette
+                float vignette = 1.0 - length(p * 0.5);
+                color *= smoothstep(0.0, 1.0, vignette);
+                
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+
+        const positionLocation = gl.getAttribLocation(program, 'a_position');
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        const timeLoc = gl.getUniformLocation(program, 'u_time');
+        const resLoc = gl.getUniformLocation(program, 'u_resolution');
+        const mouseLoc = gl.getUniformLocation(program, 'u_mouse');
+
+        let mouseX = 0, mouseY = 0;
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = window.innerHeight - e.clientY;
+        });
+
+        function render(time) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            
+            gl.uniform1f(timeLoc, time * 0.001);
+            gl.uniform2f(resLoc, canvas.width, canvas.height);
+            gl.uniform2f(mouseLoc, mouseX, mouseY);
+            
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+            requestAnimationFrame(render);
+        }
+        requestAnimationFrame(render);
+    }
+    initShader();
+
+    // Car Data Store
+    const CAR_DATABASE = {
+        'amg-one': {
+            title: 'Mercedes-AMG ONE',
+            category: 'Hybrid Hypercar',
+            engine: '1.6L Hybrid V6 Turbo',
+            hp: 1063,
+            torque: 1100,
+            accel: '2.9',
+            speed: 352,
+            trans: '8-Speed Automated Manual',
+            image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC6plkwCM_u4sqC7ld6jIuq4ObLgWkAHXso4oh443cCeJRZ1Y9ltOf1GeLBCXlzRAe5F9BOY-rizt8CTnLqPUZPncihztnD4OnHWS8y0q9K-IDBmdjBPViuNWmIQ0-Tk9xvpbOSWcxeZgOgZuGkrjgmY9dArccZUE9BT9Oyz9f3NZsHiMjxlsqaFXD62UYodRHZ1VlvMRYTe0jQoEP0lEqmaTVs2kzQaguQA2s_dj46Gv-7QSvGrErbouSyILnakbzM-WNPzYHm44A',
+            aero: 98,
+            weight: 95
+        },
+        'bmw-m4': {
+            title: 'BMW M4 G82',
+            category: 'Performance Coupe',
+            engine: '3.0L TwinPower Turbo I6',
+            hp: 503,
+            torque: 650,
+            accel: '3.5',
+            speed: 290,
+            trans: '8-Speed M Steptronic',
+            image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAcI8UP5Yb2sIgqBj6frNP2pCsESb8ZGZex4Px2vO-e7RZipbU9VHQ88OkEXxKCPDhsr2kWuZxpUIE_YSn4-dVAZMuuBc_aEbgtELwGxiKCoCRkAYBSs3P57_r6rM0WaOuJz7sLPNbOGBR34Gp-9x1rg9D4t2xmwtGD6GF48Xj5aKP7BDiFnKCS-0lBFLeE3n1BK9WEV2MXGnTlVGwsdUwYZoG5O_BFaboWbLc8HLhhBiqRLwM3fVk-TvoE1w7XG3TZWPIIDowoYIg',
+            aero: 75,
+            weight: 80
+        },
+        'audi-r8': {
+            title: 'Audi R8 V10',
+            category: 'Atmospheric Supercar',
+            engine: '5.2L Naturally Aspirated V10',
+            hp: 620,
+            torque: 580,
+            accel: '3.1',
+            speed: 331,
+            trans: '7-Speed S Tronic',
+            image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDUppjZA9H2U4QlNf9voYmyMmd4OxMlJGtblDvIl1CBf8sxlRLlaRYbgWo7OIUt1MW_AYD2n_PoCqhMqENHboY62XGVW_LBksy22ZybxJbMdCQDOQJYC6z40sAieSe_aVK2cqj8Sm4G9Q0Ndn91nGNywqAmJ32MDhB4kCmDZZa0Xzhz_6TKxwtW6_xEeZMhfFTh49Ksfwjlf2-x0WmGENAxMhEhuCFsfnoIuF0n4yu5hFgT0-L6gM88A6DMI7T7GFOyr7AS27tUOw4',
+            aero: 85,
+            weight: 88
+        },
+        'porsche-911': {
+            title: 'Porsche 911 GT3 RS',
+            category: 'Precision Track Instrument',
+            engine: '4.0L High-Rev Flat-Six',
+            hp: 518,
+            torque: 465,
+            accel: '3.2',
+            speed: 296,
+            trans: '7-Speed PDK',
+            image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBa1xyMsbMuly5UPtv68SHXbuuZFPVXF9Weac88NG1UhYFdmcMMH1okqbMkyY8NWp0BbQyfwVFGkX9pjn_aXzBAt-FFQ3eNrL1Np6uI_oHqnjf1KjEAzXVH_PkpaszhyG9PqBG0GwcQVqPOk0W4kQcfWfTdDiFQWrIjcX_sUN-tNcdBECa4U3Izl8bNnF2XcxDp6Vz3EANMx0olXmbg-W_sJdVtNHZwlOmjwE3iXsuvwwTg1d6XmE4D4Sl2TJFGtE8s49ajfu8lREA',
+            aero: 100,
+            weight: 92
+        }
+    };
+
+    // GSAP Animations & Modal Logic
+    gsap.registerPlugin(ScrollTrigger);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('car-modal');
+        const modalClose = document.getElementById('modal-close');
+        const modalOverlay = modal.querySelector('.modal-overlay');
+
+        // Modal Open Function
+        const openModal = (carId) => {
+            const data = CAR_DATABASE[carId];
+            if (!data) return;
+
+            // Populate Modal
+            document.getElementById('modal-title').textContent = data.title;
+            document.getElementById('modal-category').textContent = data.category;
+            document.getElementById('modal-engine').textContent = data.engine;
+            document.getElementById('spec-torque').textContent = data.torque + ' Nm';
+            document.getElementById('spec-accel').textContent = data.accel + ' Sec';
+            document.getElementById('spec-trans').textContent = data.trans;
+            document.getElementById('modal-image').src = data.image;
+            document.getElementById('thumb-1').src = data.image;
+            document.getElementById('thumb-2').src = data.image; // Using same for placeholder variety
+            document.getElementById('thumb-3').src = data.image;
+
+            // Reset Animated Elements
+            document.getElementById('bar-aero').style.width = '0%';
+            document.getElementById('bar-weight').style.width = '0%';
+            document.getElementById('spec-hp').textContent = '0';
+            document.getElementById('spec-speed').textContent = '0';
+
+            // Show Modal
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // Trigger Animations
+            gsap.to(document.getElementById('bar-aero'), { width: data.aero + '%', duration: 1.5, ease: "expo.out", delay: 0.5 });
+            gsap.to(document.getElementById('bar-weight'), { width: data.weight + '%', duration: 1.5, ease: "expo.out", delay: 0.7 });
+            
+            // Counter Animation
+            const counters = [
+                { id: 'spec-hp', end: data.hp },
+                { id: 'spec-speed', end: data.speed }
+            ];
+            counters.forEach(c => {
+                let obj = { val: 0 };
+                gsap.to(obj, {
+                    val: c.end,
+                    duration: 1.5,
+                    ease: "power2.out",
+                    delay: 0.4,
+                    onUpdate: () => {
+                        document.getElementById(c.id).textContent = Math.floor(obj.val);
+                    }
+                });
+            });
+        };
+
+        const closeModal = () => {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        };
+
+        // Attach Click Events to Cards
+        document.querySelectorAll('.glass-card[data-car]').forEach(card => {
+            card.addEventListener('click', () => {
+                const carId = card.getAttribute('data-car');
+                openModal(carId);
+            });
+        });
+
+        // Close Interactions
+        modalClose.addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', closeModal);
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+        // Hero Reveal
+        gsap.to('#hero-title', {
+            y: 0,
+            opacity: 1,
+            duration: 1.5,
+            ease: "expo.out",
+            delay: 0.5
+        });
+
+        gsap.to('.reveal-up', {
+            y: 0,
+            opacity: 1,
+            duration: 1.2,
+            stagger: 0.15,
+            ease: "power3.out",
+            scrollTrigger: {
+                trigger: '.reveal-up',
+                start: "top 90%"
+            }
+        });
+
+        // Hero Parallax
+        window.addEventListener('scroll', () => {
+            const scroll = window.pageYOffset;
+            gsap.to('#hero-parallax', {
+                y: scroll * 0.4,
+                duration: 0.1
+            });
+        });
+
+        // 3D Tilt Effect
+        const cards = document.querySelectorAll('.tilt-element');
+        cards.forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = (y - centerY) / 10;
+                const rotateY = (centerX - x) / 10;
+
+                gsap.to(card, {
+                    rotateX: rotateX,
+                    rotateY: rotateY,
+                    duration: 0.5,
+                    ease: "power2.out"
+                });
+            });
+
+            card.addEventListener('mouseleave', () => {
+                gsap.to(card, {
+                    rotateX: 0,
+                    rotateY: 0,
+                    duration: 1,
+                    ease: "elastic.out(1, 0.3)"
+                });
+            });
+        });
+
+        // Magnetic Buttons
+        const magnetics = document.querySelectorAll('.magnetic');
+        magnetics.forEach(btn => {
+            btn.addEventListener('mousemove', e => {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                gsap.to(btn, {
+                    x: x * 0.3,
+                    y: y * 0.3,
+                    duration: 0.4,
+                    ease: "power2.out"
+                });
+            });
+            btn.addEventListener('mouseleave', () => {
+                gsap.to(btn, {
+                    x: 0,
+                    y: 0,
+                    duration: 1,
+                    ease: "elastic.out(1, 0.3)"
+                });
+            });
+        });
+
+        // Gauge Logic
+        ScrollTrigger.create({
+            trigger: '.gauge-container',
+            onEnter: () => {
+                const gauges = document.querySelectorAll('.gauge-container');
+                gauges.forEach(g => {
+                    const val = g.getAttribute('data-gauge');
+                    const circle = g.querySelector('.gauge-circle-val');
+                    const offset = 251.2 - (251.2 * val) / 100;
+                    circle.style.strokeDashoffset = offset;
+                });
+            }
+        });
+
+        // Initial Reveal for non-modal spec bars
+        ScrollTrigger.create({
+            trigger: '#car-gallery',
+            onEnter: () => {
+                document.querySelectorAll('.spec-bar-fill').forEach(bar => {
+                    bar.style.width = bar.parentElement.dataset.width || bar.style.width;
+                });
+            }
+        });
+    });
+</script>
+</body></html>
